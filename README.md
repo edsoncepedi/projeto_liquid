@@ -49,8 +49,19 @@ contrato confirmado com a aplicacao.
 
 ### Com Docker (recomendado)
 
+Em um Ubuntu novo, primeiro o Docker e o plugin de compose:
+
 ```bash
-docker compose up
+sudo apt update
+sudo apt install -y docker.io docker-compose-plugin
+sudo usermod -aG docker $USER && newgrp docker    # evita ter de usar sudo
+docker compose version                            # deve responder v2.x ou superior
+```
+
+Depois, na pasta do projeto:
+
+```bash
+docker compose up --build
 ```
 
 | Servico | URL | O que e |
@@ -59,11 +70,73 @@ docker compose up
 | Middleware | http://localhost:8090/status | situacao do polling e dos eventos |
 | Aplicacao (dublê) | http://localhost:8000 | lista os eventos recebidos |
 
-Para usar a aplicacao **real**, suba so os dois primeiros e aponte a URL:
+Se estiver acessando de outra maquina, troque `localhost` pelo IP do servidor
+(os tres servicos ja escutam em `0.0.0.0`).
+
+#### Conferir se subiu certo
+
+Nos logs do `docker compose up`, as linhas que confirmam a cadeia sao:
+
+```text
+liquid-simulador   | Servidor Modbus TCP escutando em 0.0.0.0:5020
+liquid-simulador   | CLP virtual inicializado: 4 estacoes em VAZIO
+liquid-middleware  | Conectado ao Modbus simulador:5020 (unit id 1)
+liquid-middleware  | Polling iniciado: 1.0s
+liquid-middleware  | Estado inicial registrado (25 pontos). Eventos so a partir da primeira mudanca.
+```
+
+A partir dai o log **fica em silencio** enquanto nada muda - isso e o
+comportamento correto, nao travamento.
+
+Com a cadeia no ar, o roteiro completo roda sozinho (usa so a biblioteca
+padrao do Python, nao precisa de venv nem de instalar nada):
 
 ```bash
-APPLICATION_BASE_URL=http://host.docker.internal:8000 docker compose up simulador middleware
+python3 scripts/validar_cadeia.py
 ```
+
+Ele percorre estado, medicao, deadband, aprovacao e reset, e imprime os eventos
+que chegaram na aplicacao. Ou faca pela interface, em http://localhost:8080.
+
+Outros comandos uteis:
+
+```bash
+docker compose ps                     # simulador deve aparecer "healthy"
+docker compose logs -f middleware     # so o log do middleware
+docker compose down                   # parar tudo
+docker compose up --build --force-recreate    # reconstruir do zero
+```
+
+#### Se algo falhar
+
+| Sintoma | Causa provavel |
+|---|---|
+| `permission denied ... docker.sock` | falta `usermod -aG docker $USER` (e reabrir a sessao) |
+| `docker: 'compose' is not a docker command` | falta o pacote `docker-compose-plugin` |
+| `bind: address already in use` | as portas 8080/8090/8000/5020 ja estao ocupadas - ajuste o lado esquerdo do `ports:` no `docker-compose.yml` |
+| middleware repete `Falha de conexao Modbus` | o simulador nao ficou saudavel; veja `docker compose logs simulador` |
+
+#### Usando a aplicacao real
+
+O `docker-compose.yml` define as variaveis diretamente, entao passar
+`APPLICATION_BASE_URL=... docker compose up` **nao** tem efeito. Edite a linha
+no servico `middleware`:
+
+```yaml
+      APPLICATION_BASE_URL: http://IP_DA_APLICACAO:8000
+```
+
+e suba so os dois servicos, sem o dublê:
+
+```bash
+docker compose up simulador middleware
+```
+
+O mesmo vale para apontar o middleware ao **CLP real**: troque `MODBUS_HOST`,
+`MODBUS_PORT` e `MODBUS_UNIT_ID` no mesmo bloco e suba so o middleware.
+
+> O arquivo `.env` e usado apenas na execucao **sem** Docker. O compose nao
+> injeta `.env` nos containers, entao um `.env` na pasta nao interfere.
 
 ### Sem Docker - Ubuntu / Linux
 
@@ -170,7 +243,7 @@ aplicacao, inclusive mostrando que nada e enviado quando nada muda.
 python -m pytest
 ```
 
-54 testes, cobrindo os cenarios da especificacao:
+60 testes, cobrindo os cenarios da especificacao:
 
 | Arquivo | O que cobre |
 |---|---|
@@ -180,6 +253,7 @@ python -m pytest
 | `tests/test_events.py` | os cinco cenarios da secao 17, payloads e o caso "zerar contador nao e aprovacao" |
 | `tests/test_commands.py` | comandos da aplicacao, pulso, validacoes e perda de conexao |
 | `tests/test_end_to_end.py` | **Modbus TCP real** entre simulador e middleware, incluindo reconexao |
+| `tests/test_configuracao.py` | `.env.example` e `docker-compose.yml` batendo com as variaveis que o codigo le |
 
 Os testes rapidos ligam o middleware direto na memoria do CLP virtual por um
 leitor falso com a mesma interface do real; so o ultimo arquivo abre socket.
@@ -358,5 +432,5 @@ middleware/app/
   api.py / main.py       # API de entrada e montagem das camadas
 mock_app/                # dublê da aplicacao (apenas para teste)
 scripts/                 # validacao manual das etapas
-tests/                   # 54 testes
+tests/                   # 60 testes
 ```
