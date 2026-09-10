@@ -9,6 +9,14 @@
 # Para usar a aplicacao REAL em vez do dublê:
 #   docker compose up simulador middleware
 #   e aponte APPLICATION_BASE_URL para ela.
+#
+# Se alguma porta do host ja estiver ocupada, troque so o lado do host, sem
+# editar este arquivo (as portas internas e a rede entre containers nao mudam):
+#
+#   HOST_PORT_APLICACAO=8001 docker compose up
+#   HOST_PORT_WEB=9080 HOST_PORT_MIDDLEWARE=9090 docker compose up
+#
+# Descobrir quem esta ocupando uma porta:  sudo ss -lptn 'sport = :8000'
 
 services:
 
@@ -18,8 +26,8 @@ services:
       dockerfile: simulator/Dockerfile
     container_name: liquid-simulador
     ports:
-      - "8080:8080"     # interface Web
-      - "5020:5020"     # Modbus TCP
+      - "${HOST_PORT_WEB:-8080}:8080"       # interface Web
+      - "${HOST_PORT_MODBUS:-5020}:5020"     # Modbus TCP
     environment:
       SIMULATOR_MODBUS_HOST: 0.0.0.0
       SIMULATOR_MODBUS_PORT: 5020
@@ -48,7 +56,7 @@ services:
       simulador:
         condition: service_healthy
     ports:
-      - "8090:8090"
+      - "${HOST_PORT_MIDDLEWARE:-8090}:8090"
     environment:
       # --- CLP: trocar estas tres linhas aponta para o CLP real ------------
       MODBUS_HOST: simulador
@@ -74,4 +82,4 @@ services:
       dockerfile: mock_app/Dockerfile
     container_name: liquid-aplicacao-exemplo
     ports:
-      - "8000:8000"
+      - "${HOST_PORT_APLICACAO:-8000}:8000"

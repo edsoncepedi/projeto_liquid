@@ -86,14 +86,37 @@ def test_simulador_no_compose_escuta_em_todas_as_interfaces():
     assert ambiente["WEB_HOST"] == "0.0.0.0"
 
 
-def test_portas_publicadas_batem_com_as_configuradas():
+def portas_de_container() -> dict[str, set[str]]:
+    """Lado direito de cada mapeamento: a porta DENTRO do container.
+
+    O lado do host pode ser ${HOST_PORT_*:-padrao}, entao so o lado direito
+    interessa aqui - e ele que precisa bater com a porta que o app escuta.
+    """
     compose = yaml.safe_load((RAIZ / "docker-compose.yml").read_text(encoding="utf-8"))
-    servicos = compose["services"]
-    publicadas = {
-        nome: {p.split(":")[1].split("/")[0] for p in (s.get("ports") or [])}
-        for nome, s in servicos.items()
+    return {
+        nome: {str(p).rsplit(":", 1)[-1].split("/")[0] for p in (servico.get("ports") or [])}
+        for nome, servico in compose["services"].items()
     }
+
+
+def test_portas_publicadas_batem_com_as_configuradas():
+    internas = portas_de_container()
     ambiente = ambiente_dos_servicos()
-    assert ambiente["simulador"]["WEB_PORT"] in publicadas["simulador"]
-    assert ambiente["simulador"]["SIMULATOR_MODBUS_PORT"] in publicadas["simulador"]
-    assert ambiente["middleware"]["MIDDLEWARE_API_PORT"] in publicadas["middleware"]
+    assert ambiente["simulador"]["WEB_PORT"] in internas["simulador"]
+    assert ambiente["simulador"]["SIMULATOR_MODBUS_PORT"] in internas["simulador"]
+    assert ambiente["middleware"]["MIDDLEWARE_API_PORT"] in internas["middleware"]
+
+
+def test_porta_do_host_e_configuravel_sem_editar_o_arquivo():
+    """Porta ocupada no host nao pode obrigar a editar o docker-compose.yml."""
+    compose = (RAIZ / "docker-compose.yml").read_text(encoding="utf-8")
+    for variavel in ("HOST_PORT_WEB", "HOST_PORT_MODBUS",
+                     "HOST_PORT_MIDDLEWARE", "HOST_PORT_APLICACAO"):
+        assert f"${{{variavel}:-" in compose, f"{variavel} sem valor padrao no compose"
+
+
+def test_middleware_fala_com_a_aplicacao_pela_porta_interna():
+    """Mudar a porta do host nao pode quebrar a rede entre containers."""
+    ambiente = ambiente_dos_servicos()["middleware"]
+    assert ambiente["APPLICATION_BASE_URL"].endswith(":8000")
+    assert ambiente["MODBUS_PORT"] in portas_de_container()["simulador"]

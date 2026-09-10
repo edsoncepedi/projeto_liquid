@@ -113,8 +113,35 @@ docker compose up --build --force-recreate    # reconstruir do zero
 |---|---|
 | `permission denied ... docker.sock` | falta `usermod -aG docker $USER` (e reabrir a sessao) |
 | `docker: 'compose' is not a docker command` | falta o pacote `docker-compose-plugin` |
-| `bind: address already in use` | as portas 8080/8090/8000/5020 ja estao ocupadas - ajuste o lado esquerdo do `ports:` no `docker-compose.yml` |
+| `Bind for ...:8000 failed: port is already allocated` | a porta ja esta em uso no host - veja abaixo |
 | middleware repete `Falha de conexao Modbus` | o simulador nao ficou saudavel; veja `docker compose logs simulador` |
+
+#### Porta ocupada no host
+
+Descubra quem esta usando a porta:
+
+```bash
+sudo ss -lptn 'sport = :8000'
+```
+
+Publique em outra porta, sem editar arquivo nenhum:
+
+```bash
+HOST_PORT_APLICACAO=8001 docker compose up
+```
+
+| Variavel | Padrao | Servico |
+|---|---|---|
+| `HOST_PORT_WEB` | 8080 | interface Web do simulador |
+| `HOST_PORT_MODBUS` | 5020 | Modbus TCP do simulador |
+| `HOST_PORT_MIDDLEWARE` | 8090 | API do middleware |
+| `HOST_PORT_APLICACAO` | 8000 | dublê da aplicacao |
+
+Isso muda **so a porta do host**. A rede entre os containers continua igual: o
+middleware segue falando com `simulador:5020` e `aplicacao:8000`.
+
+Se a porta 8000 estiver ocupada porque a **aplicacao real** ja roda ai, nao
+suba o dublê - veja [Usando a aplicacao real](#usando-a-aplicacao-real).
 
 #### Usando a aplicacao real
 
@@ -243,7 +270,7 @@ aplicacao, inclusive mostrando que nada e enviado quando nada muda.
 python -m pytest
 ```
 
-60 testes, cobrindo os cenarios da especificacao:
+62 testes, cobrindo os cenarios da especificacao:
 
 | Arquivo | O que cobre |
 |---|---|
@@ -432,5 +459,5 @@ middleware/app/
   api.py / main.py       # API de entrada e montagem das camadas
 mock_app/                # dublê da aplicacao (apenas para teste)
 scripts/                 # validacao manual das etapas
-tests/                   # 60 testes
+tests/                   # 62 testes
 ```
