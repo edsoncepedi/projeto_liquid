@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simulador de CLP - Teste de liquidificadores</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">SIM</span>
+        <span class="brand-text">SIMULADOR DE CLP</span>
+      </div>
+      <h1 id="title">TESTE LIQUIDIFICADOR</h1>
+      <div class="clock" id="clock">--:--:--</div>
+    </header>
+
+    <nav class="tabs" id="tabs">
+      <button type="button" data-tab="operacao" class="active">OPERACAO</button>
+      <button type="button" data-tab="historico">HISTORICO</button>
+      <button type="button" data-tab="memoria">MEMORIA MODBUS</button>
+    </nav>
+
+    <main>
+      <section id="tab-operacao" class="tab">
+        <div class="global-bar" id="global-bar"></div>
+        <div class="stations" id="stations"></div>
+      </section>
+
+      <section id="tab-historico" class="tab hidden">
+        <div class="panel-title">HISTORICO LIQUIDIFICADOR</div>
+        <div class="history" id="history"></div>
+      </section>
+
+      <section id="tab-memoria" class="tab hidden">
+        <div class="panel-title">MEMORIA MODBUS DO CLP VIRTUAL</div>
+        <div class="memory-controls">
+          <label>Area
+            <select id="memory-kind">
+              <option value="coil">Coils</option>
+              <option value="holding_register" selected>Holding Registers</option>
+              <option value="discrete_input">Discrete Inputs</option>
+              <option value="input_register">Input Registers</option>
+            </select>
+          </label>
+          <label>Enderecos
+            <select id="memory-limit">
+              <option value="64">0 - 63</option>
+              <option value="128">0 - 127</option>
+              <option value="256" selected>0 - 255</option>
+              <option value="512">0 - 511</option>
+            </select>
+          </label>
+          <label class="check">
+            <input type="checkbox" id="memory-mapped-only" checked />
+            somente enderecos usados pelo mapa
+          </label>
+          <span class="hint" id="memory-hint"></span>
+        </div>
+        <div class="memory-table" id="memory"></div>
+      </section>
+    </main>
+
+    <footer class="statusbar">
+      <span id="conn" class="conn">conectando...</span>
+      <span id="map-info" class="map-info"></span>
+      <span id="last-action" class="last-action"></span>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

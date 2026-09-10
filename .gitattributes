@@ -1,0 +1,6 @@
+# Mantem LF em todo o repositorio, inclusive quando clonado no Windows.
+# Dockerfile e scripts com CRLF quebram no Linux.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary

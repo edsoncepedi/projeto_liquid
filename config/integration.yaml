@@ -1,0 +1,145 @@
+# =============================================================================
+# CONTRATO DE INTEGRACAO DO MIDDLEWARE (eventos HTTP e comandos)
+# =============================================================================
+#
+# Os endpoints e payloads abaixo sao CONFIGURACAO, nao codigo. Eles ainda nao
+# foram confirmados com a aplicacao real. Ajuste este arquivo quando os
+# endpoints e contratos definitivos forem definidos - a logica do middleware
+# nao precisa mudar.
+#
+# A URL base vem da variavel de ambiente APPLICATION_BASE_URL.
+#
+# Placeholders disponiveis nos payloads:
+#   {station}         numero da estacao (1..N) - ausente em pontos globais
+#   {station_label}   rotulo da estacao ("ESTACAO 01")
+#   {point}           nome do ponto que disparou o evento
+#   {value}           valor atual (ja escalado)
+#   {value_label}     rotulo do enum, quando o ponto tiver enum
+#   {previous}        valor anterior
+#   {previous_label}  rotulo anterior do enum
+#   {delta}           diferenca (atual - anterior), para contadores
+#   {timestamp}       ISO-8601 do instante do evento
+#   {<nome do ponto>} valor atual de qualquer ponto do grupo (ex.: {power})
+# =============================================================================
+
+version: 1
+
+# Enviar o estado completo no primeiro ciclo, logo apos conectar?
+# false = o primeiro ciclo apenas grava a linha de base e nada e enviado;
+# a aplicacao so recebe eventos a partir da primeira mudanca real.
+initial_snapshot: false
+
+http:
+  timeout_seconds: 5.0
+  # Reenvio em caso de falha da aplicacao.
+  retry:
+    attempts: 3
+    backoff_seconds: 0.5
+  headers:
+    Content-Type: application/json
+
+# ---------------------------------------------------------------------------
+# Eventos: o que o middleware envia para a aplicacao.
+#
+# rule:
+#   enum_change      -> dispara quando o valor de um ponto com enum muda
+#   counter_increase -> dispara quando um contador AUMENTA (ignora reset p/ 0)
+#   value_change     -> dispara quando qualquer ponto do grupo muda alem do
+#                       deadband; agrupa os pontos em um unico evento
+# ---------------------------------------------------------------------------
+events:
+
+  status_changed:
+    enabled: true
+    rule: enum_change
+    points: [status]
+    endpoint: /status
+    method: POST
+    payload:
+      event: status_changed
+      station: "{station}"
+      from: "{previous_label}"
+      to: "{value_label}"
+      timestamp: "{timestamp}"
+
+  approved:
+    enabled: true
+    rule: counter_increase
+    points: [approved]
+    endpoint: /approved
+    method: POST
+    payload:
+      event: approved
+      station: "{station}"
+      count: "{delta}"
+      total_approved: "{value}"
+      timestamp: "{timestamp}"
+
+  rejected:
+    enabled: true
+    rule: counter_increase
+    points: [rejected]
+    endpoint: /rejected
+    method: POST
+    payload:
+      event: rejected
+      station: "{station}"
+      count: "{delta}"
+      total_rejected: "{value}"
+      timestamp: "{timestamp}"
+
+  counter_changed:
+    enabled: true
+    rule: value_change
+    points: [total, approved, rejected]
+    endpoint: /counters
+    method: POST
+    payload:
+      event: counter_changed
+      station: "{station}"
+      total: "{total}"
+      approved: "{approved}"
+      rejected: "{rejected}"
+      timestamp: "{timestamp}"
+
+  measurement_changed:
+    enabled: true
+    rule: value_change
+    points: [power, voltage]
+    endpoint: /measurement
+    method: POST
+    payload:
+      event: measurement_changed
+      station: "{station}"
+      power: "{power}"
+      voltage: "{voltage}"
+      timestamp: "{timestamp}"
+
+# ---------------------------------------------------------------------------
+# Comandos: o que a aplicacao envia para o middleware, que vira escrita Modbus.
+#
+# POST {MIDDLEWARE}/commands  {"station": 1, "command": "reset"}
+#
+# mode:
+#   pulse -> escreve value, aguarda pulse_ms, escreve o valor de repouso
+#   set   -> escreve o valor recebido no campo "value" da requisicao
+# ---------------------------------------------------------------------------
+commands:
+
+  reset:
+    description: "Zera os contadores da estacao (equivale ao botao RESET da IHM)."
+    point: cmd_reset
+    mode: pulse
+    value: 1
+    idle_value: 0
+    pulse_ms: 300
+
+  set_status:
+    description: "Forca o estado da estacao (uso de manutencao/teste)."
+    point: status
+    mode: set
+
+  set_voltage:
+    description: "Ajusta a tensao da bancada (ponto global)."
+    point: voltage
+    mode: set

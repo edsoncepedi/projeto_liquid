@@ -1,0 +1,77 @@
+# Ambiente de desenvolvimento completo:
+#
+#   docker compose up
+#
+#   simulador  http://localhost:8080   (interface Web parecida com a IHM)
+#   middleware http://localhost:8090   (status, comandos)
+#   aplicacao  http://localhost:8000   (dublê de teste - ver perfil abaixo)
+#
+# Para usar a aplicacao REAL em vez do dublê:
+#   docker compose up simulador middleware
+#   e aponte APPLICATION_BASE_URL para ela.
+
+services:
+
+  simulador:
+    build:
+      context: .
+      dockerfile: simulator/Dockerfile
+    container_name: liquid-simulador
+    ports:
+      - "8080:8080"     # interface Web
+      - "5020:5020"     # Modbus TCP
+    environment:
+      SIMULATOR_MODBUS_HOST: 0.0.0.0
+      SIMULATOR_MODBUS_PORT: 5020
+      WEB_HOST: 0.0.0.0
+      WEB_PORT: 8080
+      MODBUS_MAP_PATH: config/modbus_map.yaml
+      SIMULATOR_TITLE: TESTE LIQUIDIFICADOR
+      INITIAL_VOLTAGE: "121.0"
+      LOG_LEVEL: INFO
+    volumes:
+      # o mapa fica montado: editar o YAML e reiniciar basta, sem rebuild
+      - ./config:/app/config:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  middleware:
+    build:
+      context: .
+      dockerfile: middleware/Dockerfile
+    container_name: liquid-middleware
+    depends_on:
+      simulador:
+        condition: service_healthy
+    ports:
+      - "8090:8090"
+    environment:
+      # --- CLP: trocar estas tres linhas aponta para o CLP real ------------
+      MODBUS_HOST: simulador
+      MODBUS_PORT: "5020"
+      MODBUS_UNIT_ID: "1"
+      # ---------------------------------------------------------------------
+      POLL_INTERVAL: "1.0"
+      RECONNECT_DELAY: "3.0"
+      APPLICATION_BASE_URL: http://aplicacao:8000
+      MIDDLEWARE_API_HOST: 0.0.0.0
+      MIDDLEWARE_API_PORT: "8090"
+      MODBUS_MAP_PATH: config/modbus_map.yaml
+      INTEGRATION_CONFIG_PATH: config/integration.yaml
+      LOG_LEVEL: INFO
+    volumes:
+      - ./config:/app/config:ro
+
+  # Dublê da aplicacao: apenas registra os eventos recebidos.
+  # Nao representa o contrato real - existe para validar a cadeia.
+  aplicacao:
+    build:
+      context: .
+      dockerfile: mock_app/Dockerfile
+    container_name: liquid-aplicacao-exemplo
+    ports:
+      - "8000:8000"

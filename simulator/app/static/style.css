@@ -1,0 +1,184 @@
+/* Interface de teste inspirada na IHM real: painel claro, blocos por estacao,
+   tipografia larga e leitura a distancia. Nao e uma copia da IHM. */
+
+:root {
+  --azul: #2f4f8f;
+  --azul-claro: #dfe6f5;
+  --azul-borda: #9fb0d4;
+  --fundo: #e9ecf3;
+  --painel: #f7f8fb;
+  --verde: #1f9d4d;
+  --vermelho: #cc2b2b;
+  --cinza: #6c7488;
+  --texto: #1c2333;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.app { max-width: 1400px; margin: 0 auto; padding: 12px 16px 32px; }
+
+/* --- topo ------------------------------------------------------------- */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; background: var(--painel); border: 1px solid var(--azul-borda);
+  border-radius: 6px; padding: 10px 16px;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark {
+  background: var(--azul); color: #fff; font-weight: 700; letter-spacing: 1px;
+  padding: 4px 8px; border-radius: 4px; font-size: 13px;
+}
+.brand-text { font-weight: 600; color: var(--cinza); letter-spacing: 1px; font-size: 13px; }
+.topbar h1 { font-size: 20px; margin: 0; letter-spacing: 1px; }
+.clock { font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 600; }
+
+/* --- abas -------------------------------------------------------------- */
+.tabs { display: flex; gap: 6px; margin: 12px 0; flex-wrap: wrap; }
+.tabs button {
+  background: var(--azul-claro); border: 1px solid var(--azul-borda);
+  color: var(--azul); font-weight: 600; letter-spacing: 1px;
+  padding: 8px 18px; border-radius: 4px; cursor: pointer; font-size: 13px;
+}
+.tabs button.active { background: var(--azul); color: #fff; }
+
+.tab.hidden { display: none; }
+
+.panel-title {
+  background: var(--azul); color: #fff; font-weight: 600; letter-spacing: 1px;
+  padding: 8px 14px; border-radius: 4px; margin-bottom: 12px; text-align: center;
+}
+
+/* --- barra de valores globais ------------------------------------------ */
+.global-bar {
+  display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
+  background: var(--painel); border: 1px solid var(--azul-borda);
+  border-radius: 6px; padding: 10px 14px; margin-bottom: 12px;
+}
+.global-item { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.global-item label { color: var(--cinza); font-weight: 600; letter-spacing: .5px; }
+.global-item output { font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; }
+
+/* --- estacoes ---------------------------------------------------------- */
+.stations, .history { display: grid; gap: 12px; }
+
+/* Operacao: duas estacoes por linha, como na IHM. */
+.stations {
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  max-width: 1000px; margin: 0 auto;
+}
+/* Historico: as quatro estacoes lado a lado, como na IHM. */
+.history { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.card {
+  background: var(--painel); border: 1px solid var(--azul-borda);
+  border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 10px;
+}
+.card h2 {
+  margin: 0; text-align: center; font-size: 17px; letter-spacing: 1px; color: var(--azul);
+}
+
+.gauge { display: block; margin: 0 auto; }
+.gauge .arco { fill: none; stroke: #d6dae6; stroke-width: 10; }
+.gauge .marca { stroke: #6c7488; stroke-width: 1.5; }
+.gauge .rotulo { font-size: 9px; fill: #6c7488; text-anchor: middle; }
+.gauge .ponteiro { stroke: #1c2333; stroke-width: 2.5; stroke-linecap: round; }
+.gauge .eixo { fill: #1c2333; }
+
+.leitura {
+  border: 1px solid var(--azul-borda); background: #fff; border-radius: 3px;
+  padding: 4px 10px; font-size: 20px; font-weight: 700; text-align: center;
+  font-variant-numeric: tabular-nums; min-width: 110px; margin: -38px auto 0;
+  position: relative;
+}
+
+.estado {
+  text-align: center; font-size: 20px; font-weight: 700; letter-spacing: 2px;
+  padding: 6px; border-radius: 4px; background: #fff; border: 1px solid var(--azul-borda);
+}
+.estado[data-estado="APROVADO"] { background: var(--verde); color: #fff; border-color: var(--verde); }
+.estado[data-estado="REPROVADO"] { background: var(--vermelho); color: #fff; border-color: var(--vermelho); }
+.estado[data-estado="TESTANDO"] { background: #f0b429; border-color: #d69e2e; }
+.estado[data-estado="PRODUTO_INSERIDO"] { background: var(--azul-claro); }
+
+/* lampadas P / V1..V12 */
+.lamps { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+.lamp { display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; }
+.lamp .bulb {
+  width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 2px solid #b7bdcc;
+}
+.lamp.on .bulb { background: var(--verde); border-color: #16743a; box-shadow: 0 0 6px rgba(31,157,77,.6); }
+.lamp span { font-size: 10px; color: var(--cinza); font-weight: 600; }
+
+/* controles */
+.controle { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.controle label { color: var(--cinza); font-weight: 600; min-width: 68px; }
+.controle input[type="range"] { flex: 1; }
+.controle input[type="number"] {
+  width: 84px; padding: 3px 6px; border: 1px solid var(--azul-borda); border-radius: 3px;
+}
+
+.eventos { display: flex; gap: 6px; flex-wrap: wrap; }
+.eventos button, .btn {
+  flex: 1 1 auto; background: var(--azul); color: #fff; border: none; border-radius: 4px;
+  padding: 8px 10px; font-weight: 600; letter-spacing: .5px; cursor: pointer; font-size: 12px;
+}
+.eventos button:disabled { background: #c3c9d6; color: #7c8598; cursor: not-allowed; }
+.eventos button.aprovar { background: var(--verde); }
+.eventos button.reprovar { background: var(--vermelho); }
+.eventos button.aprovar:disabled, .eventos button.reprovar:disabled { background: #c3c9d6; }
+
+/* --- historico --------------------------------------------------------- */
+.contador { display: flex; flex-direction: column; gap: 2px; }
+.contador label {
+  font-size: 12px; font-weight: 700; color: var(--cinza); letter-spacing: 1px; text-align: center;
+}
+.contador .valor {
+  background: #fff; border: 1px solid var(--azul-borda); border-radius: 3px;
+  text-align: center; font-size: 20px; font-weight: 700; padding: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.contador.aprovado .valor { background: var(--verde); color: #fff; border-color: var(--verde); }
+.contador.reprovado .valor { background: var(--vermelho); color: #fff; border-color: var(--vermelho); }
+
+/* --- memoria ----------------------------------------------------------- */
+.memory-controls {
+  display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+  background: var(--painel); border: 1px solid var(--azul-borda);
+  border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px;
+}
+.memory-controls label { display: flex; align-items: center; gap: 6px; color: var(--cinza); font-weight: 600; }
+.memory-controls select { padding: 4px 6px; border: 1px solid var(--azul-borda); border-radius: 3px; }
+.memory-controls .check { font-weight: 500; }
+.hint { color: var(--cinza); font-size: 12px; }
+
+.memory-table {
+  display: grid; gap: 2px; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  font-family: "Cascadia Mono", Consolas, monospace; font-size: 12px;
+}
+.mem-cell {
+  display: flex; justify-content: space-between; gap: 8px; background: #fff;
+  border: 1px solid #dde1ea; border-radius: 3px; padding: 3px 7px;
+}
+.mem-cell.ativo { background: #e8f6ec; border-color: #9ed5b0; }
+.mem-cell .addr { color: var(--cinza); }
+.mem-cell .owner { color: var(--azul); font-size: 11px; }
+.mem-cell .val { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* --- rodape ------------------------------------------------------------ */
+.statusbar {
+  display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+  margin-top: 16px; padding: 8px 14px; font-size: 12px; color: var(--cinza);
+  background: var(--painel); border: 1px solid var(--azul-borda); border-radius: 6px;
+}
+.conn::before {
+  content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--vermelho); margin-right: 6px;
+}
+.conn.ok::before { background: var(--verde); }
+.last-action { margin-left: auto; font-style: italic; }
