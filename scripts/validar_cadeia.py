@@ -2,12 +2,23 @@
 
 Uso (com os tres servicos em execucao):
     python scripts/validar_cadeia.py
-"""
-import json, time, urllib.request
 
-SIM = "http://127.0.0.1:8080"
-MID = "http://127.0.0.1:8090"
-APP = "http://127.0.0.1:8000"
+Enderecos: por padrao a maquina local nas portas padrao. Para outra maquina ou
+portas trocadas (as mesmas variaveis usadas pelo docker-compose.yml):
+
+    HOST=192.168.0.50 python3 scripts/validar_cadeia.py
+    HOST_PORT_APLICACAO=8001 python3 scripts/validar_cadeia.py
+"""
+import json, os, time, urllib.request
+
+HOST = os.environ.get("HOST", "127.0.0.1")
+SIM = f"http://{HOST}:{os.environ.get('HOST_PORT_WEB', '8080')}"
+MID = f"http://{HOST}:{os.environ.get('HOST_PORT_MIDDLEWARE', '8090')}"
+APP = f"http://{HOST}:{os.environ.get('HOST_PORT_APLICACAO', '8000')}"
+
+print("simulador: ", SIM)
+print("middleware:", MID)
+print("aplicacao: ", APP)
 
 def call(base, path, payload=None, method=None):
     data = json.dumps(payload).encode() if payload is not None else None

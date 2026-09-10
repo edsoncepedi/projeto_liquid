@@ -3,10 +3,12 @@
 Uso (com o simulador em execucao):
     python scripts/validar_simulador.py
 """
-import asyncio, json, urllib.request
+import asyncio, json, os, urllib.request
 from pymodbus.client import AsyncModbusTcpClient
 
-BASE = "http://127.0.0.1:8080"
+HOST = os.environ.get("HOST", "127.0.0.1")
+BASE = f"http://{HOST}:{os.environ.get('HOST_PORT_WEB', '8080')}"
+MODBUS_PORT = int(os.environ.get("HOST_PORT_MODBUS", "5020"))
 
 def post(path, payload):
     req = urllib.request.Request(BASE + path, data=json.dumps(payload).encode(),
@@ -25,7 +27,7 @@ async def main():
     print("  ", post("/api/points/positions", {"value": True, "station": 2, "index": 3}))
 
     print("2) lendo pelo Modbus TCP (como fara o middleware)")
-    client = AsyncModbusTcpClient("127.0.0.1", port=5020)
+    client = AsyncModbusTcpClient(HOST, port=MODBUS_PORT)
     await client.connect()
     hr = await client.read_holding_registers(0, count=1, slave=1)
     print("   tensao   HR0      =", hr.registers, "-> V:", hr.registers[0] * 0.1)
